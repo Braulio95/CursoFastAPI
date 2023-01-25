@@ -1,8 +1,31 @@
 from fastapi import FastAPI
+from pydantic import BaseModel, Field
+from typing import Optional
 
 app = FastAPI()
 app.title = "Mi aplicación con FastAPI"
 app.version = "0.0.1"
+
+class Movie(BaseModel):
+    id: Optional[int]= None
+    title: str = Field(min_length=5,max_length=15)
+    overview: str = Field(min_length=15,max_length=50)
+    year: int = Field(le=2024)
+    rating: float
+    category: str
+
+    class Config:
+        schema_extra = {
+            "example":{
+                "id":1,
+                "title":"Mí película",
+                "overview":"Mi descripción",
+                "year":2022,
+                "rating":8.0,
+                "category":"Acción"
+            }
+        }
+
 
 movies = [
       {
@@ -54,28 +77,21 @@ def getmoviesbycategory(category:str, year:int):
         if movie['category']==category and movie['year']==year:
             return movie 
     return[]
-@app.post('/movies/',tags = ['movies'])
-def createmovies(id:int, title:str, overview:str, year:int, rating:float, category:str):
-    movies.append({
-        "id": id,
-		"title": title,
-		"overview": overview,
-		"year": year,
-		"rating": rating,
-		"category": category
 
-    })
+@app.post('/movies/',tags = ['movies'])
+def createmovies(movie: Movie):
+    movies.append(movie)
     return movies 
 
 @app.put('/movies/{id}', tags = ['movies'])
-def updatemovie(id:int, title:str, overview:str, year:int, rating:float, category:str):
+def updatemovie(id:int, movie: Movie):
     for movie in movies:
         if movie['id']==id:
-            movie['title']=title
-            movie['overview']=overview
-            movie['year']=year
-            movie['rating']=rating
-            movie['category']=category
+            movie['title']=movie.title
+            movie['overview']=movie.overview
+            movie['year']=movie.year
+            movie['rating']=movie.rating
+            movie['category']=movie.category
             return movies
 
 @app.delete('/movies/{id}',tags = ['movies'])
