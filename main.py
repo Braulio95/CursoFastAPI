@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Path, Query
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 app.title = "Mi aplicación con FastAPI"
@@ -11,8 +12,8 @@ class Movie(BaseModel):
     title: str = Field(min_length=5,max_length=15)
     overview: str = Field(min_length=15,max_length=50)
     year: int = Field(le=2024)
-    rating: float
-    category: str
+    rating: float = Field(le=10, ge=1)
+    category: str = Field(min_length=5,max_length=15)
 
     class Config:
         schema_extra = {
@@ -59,29 +60,29 @@ movies = [
 def message():
     return {'hello':'world'}
 
-@app.get('/movies',tags = ['movies'])
+@app.get('/movies',tags = ['movies'], status_code=200)
 def getmovies():
-    return movies
+    return JSONResponse(status_code=200, content=movies)
 
 @app.get('/movies/{id}', tags = ['movies'])
-def getmovie(id:int):
+def getmovie(id:int = Path(ge =1, le=2000)):
     for movie in movies:
         if movie['id']==id:
-            return movie
+            return JSONResponse(content=movie)
 
-    return [] 
+    return JSONResponse(status_code=404,content=[])
 
 @app.get('/movies/', tags = ['movies'])
-def getmoviesbycategory(category:str, year:int):
+def getmoviesbycategory(category:str = Query(min_length=5,max_length=15), year:int = Query(ge=1900,le=2023)):
     for movie in movies:
         if movie['category']==category and movie['year']==year:
-            return movie 
-    return[]
+            return JSONResponse(content=movie) 
+    return JSONResponse(content=[])
 
-@app.post('/movies/',tags = ['movies'])
+@app.post('/movies/',tags = ['movies'], status_code=201)
 def createmovies(movie: Movie):
     movies.append(movie)
-    return movies 
+    return JSONResponse(status_code=201, content={"mensaje":"se modificó la película"}) 
 
 @app.put('/movies/{id}', tags = ['movies'])
 def updatemovie(id:int, movie: Movie):
@@ -92,11 +93,11 @@ def updatemovie(id:int, movie: Movie):
             movie['year']=movie.year
             movie['rating']=movie.rating
             movie['category']=movie.category
-            return movies
+            return JSONResponse(content={"mensaje":"se modificó la película"})
 
-@app.delete('/movies/{id}',tags = ['movies'])
+@app.delete('/movies/{id}',tags = ['movies'], status_code=200)
 def deletemovie(id:int):
     for movie in movies:
         if movie["id"]==id:
             movies.remove(movie)
-            return movies
+            return JSONResponse(status_code=200, content={"mensaje":"se eliminó la película"})
