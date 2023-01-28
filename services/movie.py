@@ -22,3 +22,19 @@ class MovieService():
         self.db.add(newmovie)
         self.db.commit()
         return 
+    
+    def updatemovie(self, id:int, movie:Movie):
+        data = self.db.query(MovieModel).filter(MovieModel.id==id).first()
+        data.title = movie.title
+        data.overview = movie.overview
+        data.year = movie.year
+        data.rating = movie.rating
+        data.category = movie.category
+        self.db.commit()
+        return 
+    
+    def deletemovie(self, id:int):
+       data = self.db.query(MovieModel).filter(MovieModel.id == id).first()
+       self.db.delete(data)
+       self.db.commit()
+       return
