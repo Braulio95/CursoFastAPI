@@ -1,45 +1,28 @@
 from fastapi import APIRouter
 from fastapi import Path, Query, Depends
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import List
 from fastapi.responses import JSONResponse
 from config.database import Session
 from models.movies import Movie as MovieModel
 from fastapi.encoders import jsonable_encoder
 from middlewares.jwtbearer import JWTBearer
+from services.movie import MovieService
+from schemas.movie import Movie
 
 movierouter = APIRouter()
 
-class Movie(BaseModel):
-    id: Optional[int]= None
-    title: str = Field(min_length=5,max_length=15)
-    overview: str = Field(min_length=15,max_length=50)
-    year: int = Field(le=2024)
-    rating: float = Field(le=10, ge=1)
-    category: str = Field(min_length=5,max_length=15)
 
-    class Config:
-        schema_extra = {
-            "example":{
-                "id":1,
-                "title":"Mí película",
-                "overview":"Mi descripción",
-                "year":2022,
-                "rating":8.0,
-                "category":"Acción"
-            }
-        }
 
 @movierouter.get('/movies',tags = ['movies'], status_code=200, response_model=List[Movie],dependencies= [Depends(JWTBearer())])
 def getmovies()->List[Movie]:
     db = Session()
-    data = db.query(MovieModel).all()
+    data = MovieService(db).getmovies()
     return JSONResponse(status_code=200, content= jsonable_encoder(data))
 
 @movierouter.get('/movies/{id}', tags = ['movies'], response_model=Movie)
 def getmovie(id:int = Path(ge =1, le=2000))->Movie:
     db = Session()
-    data = db.query(MovieModel).filter(MovieModel.id == id).first()
+    data = MovieService(db).getmovie(id)
     if not data:
         return JSONResponse(status_code=404, content={"message":"no encontrado"})
     return JSONResponse(status_code=200, content= jsonable_encoder(data))
@@ -47,7 +30,7 @@ def getmovie(id:int = Path(ge =1, le=2000))->Movie:
 @movierouter.get('/movies/', tags = ['movies'],response_model=List[Movie])
 def getmoviesbycategory(category:str = Query(min_length=5,max_length=15))->List[Movie]:
     db = Session()
-    data = db.query(MovieModel).filter(MovieModel.category == category).all()
+    data = MovieService(db).getmoviebycategory(category)
     if not data:
         return JSONResponse(status_code=404, content={"message":"no encontrado"})
     return JSONResponse(status_code=200, content= jsonable_encoder(data))
@@ -56,9 +39,7 @@ def getmoviesbycategory(category:str = Query(min_length=5,max_length=15))->List[
 @movierouter.post('/movies/',tags = ['movies'], status_code=201, response_model=dict)
 def createmovies(movie: Movie)->dict:
     db =Session()
-    newmovie = MovieModel(**movie.dict())
-    db.add(newmovie)
-    db.commit()
+    MovieService(db).createmovie(movie)
     return JSONResponse(status_code=201, content={"mensaje":"se modificó la película"}) 
 
 @movierouter.put('/movies/{id}', tags = ['movies'], response_model=dict, status_code=200)
